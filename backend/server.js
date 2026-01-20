@@ -1,55 +1,66 @@
-const fastify = require('fastify')({
+const fastify = require('fastify')({ 
   logger: process.env.NODE_ENV === 'development',
-  trustProxy: true
+  trustProxy: true 
 });
-
-const cors = require('@fastify/cors');
+const cors = require('@fastify/cors');  // Changed from fastify-cors
 require('dotenv').config();
 
-// Frontend URL based on environment
-const FRONTEND_URL =
-  process.env.NODE_ENV === 'production'
-    ? process.env.FRONTEND_URL
-    : 'http://localhost:3000';
+// Production CORS settings
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? [process.env.FRONTEND_URL, 'http://localhost:3000']
+  : 'http://localhost:3000';
 
-// CORS
 fastify.register(cors, {
-  origin: FRONTEND_URL,
-  credentials: true
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 });
 
-// Rate limiting
-fastify.register(require('@fastify/rate-limit'), {
-  max: 100,
-  timeWindow: '1 minute'
-});
-
-// Routes
+// Import routes
 fastify.register(require('./routes/jobRoutes'), { prefix: '/api' });
 
-// Test route
-fastify.get('/api/test', async () => {
-  return { message: 'API is working!' };
+// Health check endpoint
+fastify.get('/api/health', async () => {
+  return { 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    service: 'job-tracker-api',
+    version: '1.0.0'
+  };
 });
 
-// Health check
-fastify.get('/health', async () => {
-  return { status: 'OK', timestamp: new Date().toISOString() };
+// Root endpoint
+fastify.get('/', async () => {
+  return { 
+    message: 'Job Tracker API is running',
+    docs: '/api/health for health check'
+  };
 });
 
-// Global error handler
+// Handle 404
+fastify.setNotFoundHandler((request, reply) => {
+  reply.code(404).send({ 
+    error: 'Route not found',
+    path: request.url,
+    method: request.method,
+    availableRoutes: ['/api/health', '/api/jobs', '/api/applications', '/api/chat']
+  });
+});
+
+// Error handler
 fastify.setErrorHandler((error, request, reply) => {
+  console.error('Server error:', error);
+  
   if (error.statusCode === 429) {
-    reply.code(429).send({
-      error: 'Too many requests. Please try again later.'
+    reply.code(429).send({ 
+      error: 'Too many requests. Please try again later.' 
     });
   } else {
-    fastify.log.error(error);
-    reply.code(error.statusCode || 500).send({
-      error:
-        process.env.NODE_ENV === 'production'
-          ? 'Internal server error'
-          : error.message
+    reply.code(error.statusCode || 500).send({ 
+      error: process.env.NODE_ENV === 'production' 
+        ? 'Internal server error' 
+        : error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
@@ -57,13 +68,20 @@ fastify.setErrorHandler((error, request, reply) => {
 // Start server
 const start = async () => {
   try {
-    await fastify.listen({
-      port: process.env.PORT || 5000,
-      host: '0.0.0.0'
+    const port = process.env.PORT || 5000;
+    const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+    
+    await fastify.listen({ 
+      port: port,
+      host: host
     });
-    console.log(`🚀 Server running on port ${process.env.PORT || 5000}`);
+    
+    console.log(`✅ Server running on ${host}:${port}`);
+    console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🌐 CORS allowed: ${allowedOrigins}`);
+    
   } catch (err) {
-    fastify.log.error(err);
+    console.error('❌ Server failed to start:', err);
     process.exit(1);
   }
 };

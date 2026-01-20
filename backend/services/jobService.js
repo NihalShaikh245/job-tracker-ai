@@ -1,4 +1,5 @@
 const axios = require('axios');
+const crypto = require('crypto');
 const aiService = require('./aiService');
 const redisService = require('./redisService');
 const cacheService = require('./cacheService');
@@ -10,6 +11,7 @@ class JobService {
     this.useMockData = !this.rapidApiKey;
   }
 
+  // Fetch jobs from cache or API
   async fetchJobs(filters = {}) {
     try {
       // Check cache first
@@ -18,19 +20,19 @@ class JobService {
       if (cached) return cached;
 
       let jobs = [];
-      
+
       if (this.useMockData) {
         jobs = this.getMockJobs();
       } else {
         jobs = await this.fetchFromRapidAPI(filters);
       }
 
-      // Apply local filtering
+      // Apply local filters
       jobs = this.applyLocalFilters(jobs, filters);
-      
+
       // Cache the results
       await redisService.cacheJobs(cacheKey, jobs);
-      
+
       return jobs;
     } catch (error) {
       console.error('Error fetching jobs:', error);
@@ -63,45 +65,35 @@ class JobService {
 
   mapFilters(filters) {
     const mapped = {};
-    
-    if (filters.location) {
-      mapped.location = filters.location;
-    }
-    
-    if (filters.salary_min) {
-      mapped.salary_min = filters.salary_min;
-    }
-    
-    if (filters.experience) {
-      mapped.experience = filters.experience;
-    }
-    
+    if (filters.location) mapped.location = filters.location;
+    if (filters.salary_min) mapped.salary_min = filters.salary_min;
+    if (filters.experience) mapped.experience = filters.experience;
     return mapped;
   }
 
   applyLocalFilters(jobs, filters) {
     let filtered = [...jobs];
-    
-    // Job Type filter
+
+    // Job type
     if (filters.job_type && filters.job_type !== 'all') {
-      filtered = filtered.filter(job => 
-        job.job_employment_type?.toLowerCase() === filters.job_type.toLowerCase()
+      filtered = filtered.filter(
+        job => job.job_employment_type?.toLowerCase() === filters.job_type.toLowerCase()
       );
     }
-    
-    // Work Mode filter
+
+    // Work mode
     if (filters.work_mode && filters.work_mode !== 'all') {
       if (filters.work_mode === 'remote') {
         filtered = filtered.filter(job => job.job_is_remote);
       } else if (filters.work_mode === 'hybrid') {
-        filtered = filtered.filter(job => 
+        filtered = filtered.filter(job =>
           job.job_description?.toLowerCase().includes('hybrid')
         );
       } else if (filters.work_mode === 'onsite') {
         filtered = filtered.filter(job => !job.job_is_remote);
       }
     }
-    
+
     // Skills filter
     if (filters.skills && filters.skills.length > 0) {
       const skills = filters.skills.split(',');
@@ -110,8 +102,8 @@ class JobService {
         return skills.some(skill => jobText.includes(skill.toLowerCase()));
       });
     }
-    
-    // Date Posted filter
+
+    // Date posted
     if (filters.date_posted) {
       const now = Date.now();
       const cutoff = {
@@ -119,7 +111,7 @@ class JobService {
         'week': now - 7 * 24 * 60 * 60 * 1000,
         'month': now - 30 * 24 * 60 * 60 * 1000
       }[filters.date_posted];
-      
+
       if (cutoff) {
         filtered = filtered.filter(job => {
           const jobDate = new Date(job.job_posted_at_timestamp * 1000);
@@ -127,7 +119,7 @@ class JobService {
         });
       }
     }
-    
+
     return filtered;
   }
 
@@ -149,7 +141,7 @@ class JobService {
       'Frontend Developer',
       'Data Scientist'
     ];
-    
+
     const companies = [
       'Tech Corp Inc',
       'Startup XYZ',
@@ -157,7 +149,7 @@ class JobService {
       'Innovation Labs',
       'Digital Solutions'
     ];
-    
+
     const skills = [
       'React, JavaScript, TypeScript',
       'Node.js, MongoDB, AWS',
@@ -165,14 +157,14 @@ class JobService {
       'Figma, Sketch, Adobe XD',
       'Kubernetes, Docker, CI/CD'
     ];
-    
+
     return Array.from({ length: 20 }, (_, i) => ({
       job_id: `mock_${i}`,
       job_title: jobTitles[i % jobTitles.length],
       employer_name: companies[i % companies.length],
       job_country: 'USA',
       job_city: ['San Francisco', 'New York', 'Austin', 'Remote'][i % 4],
-      job_description: `We are looking for a skilled ${jobTitles[i % jobTitles.length]} with experience in modern technologies. Must have strong communication skills and ability to work in a fast-paced environment.`,
+      job_description: `We are looking for a skilled ${jobTitles[i % jobTitles.length]} with experience in modern technologies.`,
       job_employment_type: ['FULLTIME', 'PARTTIME', 'CONTRACTOR', 'INTERN'][i % 4],
       job_is_remote: i % 3 === 0,
       job_posted_at_timestamp: Date.now() / 1000 - (i * 86400),
@@ -182,31 +174,50 @@ class JobService {
     }));
   }
 
- async addMatchScores(jobs, resumeText) {
-  if (!resumeText) {
-    return jobs.map(job => ({
-      ...job,
-      match_score: 0,
-      match_reasons: []
-    }));
-  }
+  // Add AI match scores
+  async addMatchScores(jobs, resumeText) {
+    if (!resumeText) {
+      return jobs.map(job => ({
+        ...job,
+        match_score: 0,
+        match_reasons: [],
+        match_level: 'low'
+      }));
+    }
 
+    const resumeHash = crypto
+      .createHash('md5')
+      .update(resumeText)
+      .digest('hex')
+      .substring(0, 8);
 
     const jobsWithScores = await Promise.all(
       jobs.map(async (job) => {
+        const cacheKey = cacheService.generateMatchScoreKey(resumeHash, job.job_id);
+
+        // Try cache
+        const cached = await cacheService.get(cacheKey);
+        if (cached) return cached;
+
+        // Calculate fresh match
         const jobText = `${job.job_title} ${job.job_description} ${job.job_required_skills || ''}`;
         const match = await aiService.calculateMatchScore(resumeText, jobText);
-        
-        return {
+
+        const result = {
           ...job,
           match_score: match.score,
           match_reasons: match.reasons || [],
           match_level: this.getMatchLevel(match.score)
         };
+
+        // Cache for 24 hours
+        await cacheService.set(cacheKey, result, 86400);
+
+        return result;
       })
     );
 
-    // Sort by match score
+    // Sort by match score descending
     return jobsWithScores.sort((a, b) => b.match_score - a.match_score);
   }
 
@@ -215,42 +226,6 @@ class JobService {
     if (score >= 40) return 'medium';
     return 'low';
   }
-}
-
-// Create resume hash for cache key
-  const resumeHash = require('crypto')
-    .createHash('md5')
-    .update(resumeText)
-    .digest('hex')
-    .substring(0, 8);
-
-  const jobsWithScores = await Promise.all(
-    jobs.map(async (job) => {
-      const cacheKey = cacheService.generateMatchScoreKey(resumeHash, job.job_id);
-      
-      // Try cache first
-      const cached = await cacheService.get(cacheKey);
-      if (cached) return cached;
-
-      // Calculate fresh score
-      const jobText = `${job.job_title} ${job.job_description} ${job.job_required_skills || ''}`;
-      const match = await aiService.calculateMatchScore(resumeText, jobText);
-      
-      const result = {
-        ...job,
-        match_score: match.score,
-        match_reasons: match.reasons || [],
-        match_level: this.getMatchLevel(match.score)
-      };
-
-      // Cache for 24 hours
-      await cacheService.set(cacheKey, result, 86400);
-      
-      return result;
-    })
-  );
-
-  return jobsWithScores.sort((a, b) => b.match_score - a.match_score);
 }
 
 module.exports = new JobService();
