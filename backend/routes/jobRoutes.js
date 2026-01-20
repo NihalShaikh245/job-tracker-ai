@@ -1,205 +1,148 @@
-const jobService = require('../services/jobService');
-const aiService = require('../services/aiService');
-const redisService = require('../services/redisService');
-const applicationService = require('../services/applicationService');
-const chatService = require('../services/chatService');
-const { validateJobFilters } = require('../utils/validateJobFilters'); // optional
-
-function extractResumeInfo(text) {
-  // Example: you can parse text to extract name, email, skills, etc.
-  return {
-    length: text.length,
-    preview: text.slice(0, 100)
-  };
-}
-
 async function jobRoutes(fastify, options) {
-  
-  // ------------------------
-  // Get jobs with AI matching
-  // ------------------------
+  const jobService = require('../services/jobService');
+  const applicationService = require('../services/applicationService');
+  const chatService = require('../services/chatService');
+  const redisService = require('../services/redisService');
+
+  // Get jobs
   fastify.get('/jobs', async (request, reply) => {
     try {
-      // Optional: validate query filters
-      if (typeof validateJobFilters === 'function') {
-        const { error } = validateJobFilters(request.query);
-        if (error) {
-          reply.code(400).send({ error: error.details[0].message });
-          return;
-        }
-      }
-
       const filters = request.query;
       const userId = request.headers['x-user-id'] || 'default';
-
-      // Get user's resume for matching
-      const resumeText = await redisService.getUserResume(userId);
-
-      // Fetch and filter jobs
-      const jobs = await jobService.fetchJobs(filters);
-
-      // Add AI match scores
-      const jobsWithScores = await jobService.addMatchScores(jobs, resumeText);
-
-      // Apply match score filter if specified
-      let filteredJobs = jobsWithScores;
-      if (filters.match_score) {
-        filteredJobs = jobsWithScores.filter(job => {
-          if (filters.match_score === 'high') return job.match_score >= 70;
-          if (filters.match_score === 'medium') return job.match_score >= 40 && job.match_score < 70;
-          return true;
-        });
+      
+      // Get resume for matching
+      const resumeText = await redisService.getUserResume(userId) || '';
+      
+      // Fetch jobs
+      let jobs = [];
+      if (Object.keys(filters).length === 0) {
+        // Use mock data for now
+        jobs = jobService.getMockJobs();
+      } else {
+        jobs = await jobService.fetchJobs(filters);
       }
-
-      // Get best matches (top 6)
-      const bestMatches = filteredJobs.filter(job => job.match_score >= 70).slice(0, 6);
-
+      
+      // Add match scores
+      const jobsWithScores = await jobService.addMatchScores(jobs, resumeText);
+      
+      // Get best matches
+      const bestMatches = jobsWithScores
+        .filter(job => job.match_score >= 70)
+        .slice(0, 6);
+      
       return {
-        jobs: filteredJobs,
+        jobs: jobsWithScores,
         bestMatches,
-        total: filteredJobs.length,
+        total: jobsWithScores.length,
         hasResume: !!resumeText
       };
     } catch (error) {
-      console.error('Error in /jobs:', error);
+      console.error('Error:', error);
       reply.code(500).send({ error: 'Failed to fetch jobs' });
     }
   });
 
-  // ------------------------
   // Upload resume
-  // ------------------------
   fastify.post('/resume/upload', async (request, reply) => {
     try {
-      const { userId = 'default', text, fileName } = request.body;
-
+      const { text, fileName, userId = 'default' } = request.body;
+      
       if (!text) {
         reply.code(400).send({ error: 'Resume text is required' });
         return;
       }
-
+      
       await redisService.setUserResume(userId, text);
-
-      return {
-        success: true,
-        message: 'Resume uploaded successfully',
+      
+      return { 
+        success: true, 
+        message: 'Resume uploaded',
         fileName,
-        ...extractResumeInfo(text)
+        length: text.length
       };
     } catch (error) {
-      console.error('Error in /resume/upload:', error);
+      console.error('Error:', error);
       reply.code(500).send({ error: 'Failed to upload resume' });
     }
   });
 
-  // ------------------------
-  // Apply to a job
-  // ------------------------
+  // Apply to job
   fastify.post('/applications', async (request, reply) => {
     try {
-      const { userId = 'default', job, status = 'applied' } = request.body;
-
-      if (!job || !job.job_id) {
+      const { job, userId = 'default' } = request.body;
+      
+      if (!job) {
         reply.code(400).send({ error: 'Job data is required' });
         return;
       }
-
-      const application = await applicationService.createApplication(userId, { ...job, status });
-
+      
+      const application = await applicationService.createApplication(userId, job);
+      
       return {
         success: true,
         application,
-        message: 'Application tracked successfully'
+        message: 'Application tracked'
       };
     } catch (error) {
-      console.error('Error in /applications:', error);
-      reply.code(500).send({ error: 'Failed to apply to job' });
+      console.error('Error:', error);
+      reply.code(500).send({ error: 'Failed to track application' });
     }
   });
 
-  // ------------------------
-  // Get user applications
-  // ------------------------
+  // Get applications
   fastify.get('/applications', async (request, reply) => {
     try {
       const userId = request.headers['x-user-id'] || 'default';
       const filters = request.query;
-
+      
       const applications = await applicationService.getApplications(userId, filters);
       const stats = await applicationService.getStats(userId);
-
+      
       return { applications, stats };
     } catch (error) {
-      console.error('Error in /applications GET:', error);
-      reply.code(500).send({ error: 'Failed to fetch applications' });
+      console.error('Error:', error);
+      reply.code(500).send({ error: 'Failed to get applications' });
     }
   });
 
-  // ------------------------
-  // Update application status
-  // ------------------------
-  fastify.patch('/applications/:id', async (request, reply) => {
-    try {
-      const { id } = request.params;
-      const { userId = 'default', status, notes } = request.body;
-
-      const updates = {};
-      if (status) updates.status = status;
-      if (notes !== undefined) updates.notes = notes;
-
-      const updated = await applicationService.updateApplication(userId, id, updates);
-
-      return {
-        success: true,
-        application: updated
-      };
-    } catch (error) {
-      console.error('Error in /applications PATCH:', error);
-      reply.code(500).send({ error: 'Failed to update application' });
-    }
-  });
-
-  // ------------------------
-  // AI Chat endpoint
-  // ------------------------
+  // AI Chat
   fastify.post('/chat', async (request, reply) => {
     try {
-      const { message, context } = request.body;
-
+      const { message } = request.body;
+      
       if (!message) {
         reply.code(400).send({ error: 'Message is required' });
         return;
       }
-
-      const response = await chatService.processQuery(message, context);
-
+      
+      const response = await chatService.processQuery(message);
+      
       return {
         success: true,
         ...response
       };
     } catch (error) {
-      console.error('Error in /chat:', error);
-      reply.code(500).send({ error: 'Failed to process chat message' });
+      console.error('Error:', error);
+      reply.code(500).send({ error: 'Chat service failed' });
     }
   });
 
-  // ------------------------
-  // Get application statistics
-  // ------------------------
+  // Stats
   fastify.get('/stats', async (request, reply) => {
     try {
       const userId = request.headers['x-user-id'] || 'default';
+      
       const stats = await applicationService.getStats(userId);
       const resumeText = await redisService.getUserResume(userId);
-
+      
       return {
         ...stats,
         hasResume: !!resumeText,
         resumeLength: resumeText ? resumeText.length : 0
       };
     } catch (error) {
-      console.error('Error in /stats:', error);
-      reply.code(500).send({ error: 'Failed to fetch stats' });
+      console.error('Error:', error);
+      reply.code(500).send({ error: 'Failed to get stats' });
     }
   });
 }
