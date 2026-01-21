@@ -1,49 +1,59 @@
-# 🚀 JobTracker AI
+# 🚀 JobTracker AI – Technical README
 
-An **AI-powered job tracking system** that helps job seekers find relevant jobs, understand skill match scores, and track applications in one place.
-
----
-
-## 🌐 Live
-
-* **App**: [https://jobtrackingai.vercel.app](https://ai-job-tracking-app-rho.vercel.app/)
-* **API**: [https://job-tracker-api-stsv.onrender.com/api/health](https://job-tracker-api-stsv.onrender.com/api/health)
-* **Repo**: [https://github.com/NihalShaikh245/job-tracker-ai](https://github.com/NihalShaikh245/job-tracker-ai)
+An **AI-powered job tracking system** focused on intelligent job matching, application tracking, and scalable architecture.
 
 ---
 
-## ✨ Features
+## a) 🏗️ Architecture Diagram & Flow
 
-### 🤖 AI Intelligence
+```
+User
+  │
+  ▼
+React Frontend (Vercel)
+  │  REST API Calls
+  ▼
+Fastify Backend (Render)
+  │
+  ├─ Job Data → RapidAPI / Mock API
+  ├─ AI Matching Service (Keyword / GPT-ready)
+  └─ Cache Layer (Redis – optional)
+```
 
-* Smart job–resume matching (0–100%)
-* Match explanations
-* AI chat for natural language job search
-* Top 6 best-match jobs highlighted
+**Flow Explanation**:
 
-### 📋 Job Management
-
-* Real-time job feed (RapidAPI-ready)
-* Filters: role, skills, location, date, job type, work mode
-
-### 📊 Application Tracking
-
-* One-click apply
-* Status flow: **Applied → Interview → Offer / Rejected**
-* Dashboard with stats & filters
-
----
-
-## 🛠️ Tech Stack
-
-**Frontend**: React 18, Vite, Tailwind CSS, React Router, TanStack Query
-**Backend**: Node.js, Fastify
-**AI / APIs**: Keyword-based matching, RapidAPI JSearch (ready), OpenAI (ready)
-**Deploy**: Vercel (Frontend), Render (Backend)
+1. User searches jobs or opens dashboard
+2. Frontend requests job data from backend
+3. Backend fetches jobs → runs AI matching
+4. Scores + explanations returned to frontend
+5. Apply actions stored in application state
 
 ---
 
-## 🚀 Quick Start
+## b) ⚙️ Setup Instructions (Local)
+
+### Prerequisites
+
+* Node.js 18+
+* npm or yarn
+* Git
+
+### Environment Variables
+
+**Backend (.env)**
+
+```env
+OPENAI_API_KEY=your_key_here
+RAPIDAPI_KEY=your_key_here
+```
+
+**Frontend (.env)**
+
+```env
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+### Run Locally
 
 ```bash
 git clone https://github.com/NihalShaikh245/job-tracker-ai.git
@@ -54,12 +64,83 @@ npm run dev
 
 ---
 
-## 🚧 Future Scope
+## c) 🤖 AI Matching Logic
 
-* Resume upload & parsing
-* Authentication & profiles
-* AI interview prep
-* Email notifications
+**Approach**:
+
+* Extract skills from resume & job description
+* Assign weighted scores to matched skills
+* Normalize score to 0–100%
+
+**Formula (Simplified)**:
+
+```
+Match % = (Matched Skills / Required Skills) × 100
+```
+
+**Efficiency Considerations**:
+
+* Lightweight keyword matching (O(n))
+* Cached job data reduces API calls
+* GPT integration optional & async
+
+---
+
+## d) 🧠 Critical Thinking – Apply Popup Flow
+
+**Why Popup?**
+
+* Confirms real user intent
+* Prevents accidental application tracking
+
+**Flow**:
+
+1. User clicks "Apply"
+2. Popup asks for confirmation
+3. Job opens in new tab
+4. Status saved as "Applied"
+
+**Edge Cases Handled**:
+
+* Duplicate applications prevented
+* Cancel action does not store data
+
+**Alternatives Considered**:
+
+* Auto-apply (rejected due to false positives)
+* Manual form entry (slower UX)
+
+---
+
+## e) 📈 Scalability Considerations
+
+* **100 jobs/search**: Client-side pagination + filtering
+* **10,000 users**:
+
+  * Stateless backend APIs
+  * Redis caching for job searches
+  * Horizontal scaling on Render
+
+Future-ready for:
+
+* Auth-based sharding
+* Queue-based AI processing
+
+---
+
+## f) ⚖️ Tradeoffs & Limitations
+
+**Current Tradeoffs**:
+
+* Keyword-based AI instead of full NLP (faster, cheaper)
+* No authentication (simpler demo focus)
+
+**With More Time**:
+
+* Resume parsing (PDF/Doc)
+* True ML-based semantic matching
+* Persistent database (PostgreSQL)
+* User profiles & auth
 
 ---
 
@@ -70,4 +151,4 @@ MCA Student | Full Stack Developer | AI Enthusiast
 
 ---
 
-⭐ Star the repo if you like it!
+⭐ Designed to demonstrate architecture, AI logic, and critical engineering thinking
