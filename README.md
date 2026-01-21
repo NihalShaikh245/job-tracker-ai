@@ -6,7 +6,7 @@ An **AI-powered job tracking system** that helps job seekers find relevant jobs,
 
 ## 🌐 Live
 
-* **App**: [https://jobtrackingai.vercel.app](https://job-tracking-ai-app.vercel.app)
+* **App**: [https://jobtrackingai.vercel.app](https://ai-job-tracking-app-rho.vercel.app/)
 * **API**: [https://job-tracker-api-stsv.onrender.com/api/health](https://job-tracker-api-stsv.onrender.com/api/health)
 * **Repo**: [https://github.com/NihalShaikh245/job-tracker-ai](https://github.com/NihalShaikh245/job-tracker-ai)
 
