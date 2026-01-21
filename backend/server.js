@@ -7,7 +7,7 @@ require('dotenv').config();
 
 // Enable CORS for all origins
 fastify.register(cors, {
-  origin: '*',  // Allow all in production
+  origin: '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 });
@@ -59,13 +59,81 @@ fastify.get('/api/jobs', async (request, reply) => {
         job_apply_link: 'https://example.com/apply/2',
         match_score: 72,
         match_reasons: ['Full stack skills', 'Node.js experience']
+      },
+      {
+        job_id: '3',
+        job_title: 'Frontend Developer',
+        employer_name: 'Digital Solutions',
+        job_city: 'Remote',
+        job_country: 'USA',
+        job_description: 'Frontend developer needed for e-commerce platform.',
+        job_employment_type: 'CONTRACTOR',
+        job_is_remote: true,
+        job_posted_at_timestamp: Math.floor(Date.now() / 1000) - 259200,
+        job_required_skills: 'React, Redux, CSS, Responsive Design',
+        job_apply_link: 'https://example.com/apply/3',
+        match_score: 65,
+        match_reasons: ['React proficiency', 'UI/UX skills']
+      },
+      {
+        job_id: '4',
+        job_title: 'DevOps Engineer',
+        employer_name: 'Cloud Systems',
+        job_city: 'Austin',
+        job_country: 'USA',
+        job_description: 'DevOps engineer to manage cloud infrastructure.',
+        job_employment_type: 'FULLTIME',
+        job_is_remote: true,
+        job_posted_at_timestamp: Math.floor(Date.now() / 1000) - 345600,
+        job_required_skills: 'AWS, Docker, Kubernetes, CI/CD',
+        job_apply_link: 'https://example.com/apply/4',
+        match_score: 45,
+        match_reasons: ['Cloud infrastructure knowledge']
       }
     ];
     
+    // Apply simple filtering
+    let filteredJobs = [...mockJobs];
+    
+    if (filters.query) {
+      const query = filters.query.toLowerCase();
+      filteredJobs = filteredJobs.filter(job => 
+        job.job_title.toLowerCase().includes(query) ||
+        job.employer_name.toLowerCase().includes(query) ||
+        job.job_description.toLowerCase().includes(query)
+      );
+    }
+    
+    if (filters.match_score === 'high') {
+      filteredJobs = filteredJobs.filter(job => job.match_score >= 70);
+    } else if (filters.match_score === 'medium') {
+      filteredJobs = filteredJobs.filter(job => job.match_score >= 40 && job.match_score < 70);
+    }
+    
+    if (filters.job_type && filters.job_type !== 'all') {
+      filteredJobs = filteredJobs.filter(job => 
+        job.job_employment_type.toLowerCase() === filters.job_type.toLowerCase()
+      );
+    }
+    
+    if (filters.work_mode === 'remote') {
+      filteredJobs = filteredJobs.filter(job => job.job_is_remote);
+    } else if (filters.work_mode === 'onsite') {
+      filteredJobs = filteredJobs.filter(job => !job.job_is_remote);
+    }
+    
+    if (filters.skills) {
+      const skills = filters.skills.toLowerCase().split(',');
+      filteredJobs = filteredJobs.filter(job => {
+        const jobSkills = job.job_required_skills.toLowerCase();
+        return skills.some(skill => jobSkills.includes(skill.trim()));
+      });
+    }
+    
     return {
-      jobs: mockJobs,
-      bestMatches: mockJobs.filter(job => job.match_score >= 70),
-      total: mockJobs.length,
+      jobs: filteredJobs,
+      bestMatches: filteredJobs.filter(job => job.match_score >= 70).slice(0, 6),
+      total: filteredJobs.length,
       hasResume: true
     };
     
@@ -155,17 +223,30 @@ fastify.post('/api/chat', async (request, reply) => {
     }
     
     const response = {
-      response: `I'm your AI assistant. You asked: "${message}". In demo mode, I can suggest job filters based on your query.`,
+      response: `I'm your AI assistant. You asked: "${message}". I can help you find jobs, track applications, and answer questions about the app.`,
       filters: {},
       type: 'jobs'
     };
     
     // Simple keyword matching for filters
-    if (message.toLowerCase().includes('remote')) {
+    const msg = message.toLowerCase();
+    if (msg.includes('remote')) {
       response.filters.work_mode = 'remote';
     }
-    if (message.toLowerCase().includes('react')) {
+    if (msg.includes('react')) {
       response.filters.skills = 'react';
+    }
+    if (msg.includes('python')) {
+      response.filters.skills = 'python';
+    }
+    if (msg.includes('senior')) {
+      response.filters.query = 'senior developer';
+    }
+    if (msg.includes('figma')) {
+      response.filters.skills = 'figma';
+    }
+    if (msg.includes('this week')) {
+      response.filters.date_posted = 'week';
     }
     
     return {
@@ -185,9 +266,9 @@ fastify.get('/api/stats', async (request, reply) => {
     return {
       total: 0,
       byStatus: { applied: 0, interview: 0, offer: 0, rejected: 0 },
-      avgMatchScore: 0,
-      hasResume: false,
-      resumeLength: 0
+      avgMatchScore: 65,
+      hasResume: true,
+      resumeLength: 1500
     };
   } catch (error) {
     console.error('Error getting stats:', error);
