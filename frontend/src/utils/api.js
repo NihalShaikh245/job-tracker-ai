@@ -1,43 +1,53 @@
-import axios from 'axios';
+// SIMPLIFIED VERSION - No API calls, just return mock data
+const mockJobs = [
+  {
+    job_id: '1',
+    job_title: 'Senior React Developer',
+    employer_name: 'Tech Corp Inc',
+    job_city: 'Remote',
+    job_country: 'USA',
+    job_description: 'Looking for experienced React developer.',
+    job_employment_type: 'FULLTIME',
+    job_is_remote: true,
+    match_score: 85,
+    job_required_skills: 'React, JavaScript, TypeScript'
+  }
+];
 
-// USE YOUR ACTUAL BACKEND URL
-const API_BASE_URL = 'https://job-tracker-api-stsv.onrender.com/api';
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000
-});
-
-// API methods
 export default {
-  fetchJobs: (filters) => api.get('/jobs', { params: filters }),
-  
-  uploadResume: (text, fileName) => 
-    api.post('/resume/upload', { 
-      text: text || 'Demo resume content', 
-      fileName: fileName || 'resume.pdf',
-      userId: 'demo_user'
-    }),
-  
-  applyToJob: (job) => 
-    api.post('/applications', { 
-      job: {
-        job_id: job.job_id || '1',
-        job_title: job.job_title || 'Demo Job',
-        employer_name: job.employer_name || 'Demo Company',
-        match_score: job.match_score || 75
-      },
-      userId: 'demo_user'
-    }),
-  
-  getApplications: () => api.get('/applications'),
-  
-  chatWithAI: (message) => api.post('/chat', { 
-    message: message || 'Hello'
+  fetchJobs: () => Promise.resolve({
+    jobs: mockJobs,
+    bestMatches: [],
+    total: mockJobs.length,
+    hasResume: true
   }),
   
-  getStats: () => api.get('/stats')
+  uploadResume: () => Promise.resolve({
+    success: true,
+    message: 'Resume uploaded (demo)'
+  }),
+  
+  applyToJob: () => Promise.resolve({
+    success: true,
+    application: {
+      id: 'demo_app',
+      status: 'applied'
+    }
+  }),
+  
+  getApplications: () => Promise.resolve({
+    applications: [],
+    stats: { total: 0 }
+  }),
+  
+  chatWithAI: () => Promise.resolve({
+    response: 'AI Assistant: Try filtering jobs using the filters above!',
+    filters: {}
+  }),
+  
+  getStats: () => Promise.resolve({
+    total: 0,
+    avgMatchScore: 68,
+    hasResume: true
+  })
 };

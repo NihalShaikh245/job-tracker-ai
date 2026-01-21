@@ -16,27 +16,15 @@ dist/
 build/
 out/
 
-# IDE files
+# Vercel
+.vercel
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
-
-# Logs
-logs/
-*.log
-
-# Temp files
-tmp/
-temp/
-
-# Coverage
-coverage/
-.nyc_output/
-
-# Backup files
-*.bak

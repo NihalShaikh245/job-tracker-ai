@@ -4,11 +4,13 @@ const fastify = require('fastify')({
 });
 const cors = require('@fastify/cors');
 
-// Enable CORS
+// Update CORS to allow Vercel
 fastify.register(cors, {
-  origin: '*',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+  origin: [
+    'https://job-tracker-ai.vercel.app', // Your Vercel URL
+    'http://localhost:3000'
+  ],
+  credentials: true
 });
 
 // ========== HEALTH CHECK ==========
