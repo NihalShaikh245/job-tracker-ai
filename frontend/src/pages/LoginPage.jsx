@@ -21,10 +21,9 @@ const LoginPage = () => {
     setSuccess('');
 
     try {
-      // Read file content (simplified)
       let text = '';
       if (file.type === 'application/pdf') {
-        text = `PDF Resume: ${file.name}\n\nSenior Developer with 5+ years experience in React, Node.js, and modern web technologies.`;
+        text = `PDF Resume: ${file.name}\n\nSenior Developer with React, Node.js experience.`;
       } else {
         text = await new Promise((resolve) => {
           const reader = new FileReader();
@@ -33,34 +32,28 @@ const LoginPage = () => {
         });
       }
 
-      // Call API (will use mock in demo mode)
-      const result = await api.uploadResume(text, file.name);
+      // Try API upload
+      await api.uploadResume(text, file.name);
       
-      // Store in localStorage
       localStorage.setItem('hasResume', 'true');
       localStorage.setItem('resumeFileName', file.name);
-      localStorage.setItem('userId', 'demo_user_' + Date.now());
+      localStorage.setItem('userId', 'demo_user');
       
       setSuccess('✓ Resume uploaded successfully!');
       
-      // Navigate after delay
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1000);
+      setTimeout(() => navigate('/dashboard'), 1000);
 
     } catch (err) {
-      console.error('Upload error:', err);
+      console.error('Upload error (using demo mode):', err.message);
       
-      // Even if API fails, continue in demo mode
-      setError('Note: Using demo mode (backend offline).');
+      // Even if API fails, continue
+      setError('Note: Backend offline, using demo mode.');
       
       localStorage.setItem('hasResume', 'true');
       localStorage.setItem('resumeFileName', file.name);
-      localStorage.setItem('userId', 'demo_user_' + Date.now());
+      localStorage.setItem('userId', 'demo_user');
       
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1500);
+      setTimeout(() => navigate('/dashboard'), 1500);
       
     } finally {
       setUploading(false);
@@ -69,7 +62,7 @@ const LoginPage = () => {
 
   const handleSkip = () => {
     localStorage.setItem('hasResume', 'false');
-    localStorage.setItem('userId', 'demo_user_' + Date.now());
+    localStorage.setItem('userId', 'demo_user');
     navigate('/dashboard');
   };
 
@@ -81,7 +74,7 @@ const LoginPage = () => {
             Welcome to JobTracker AI
           </h1>
           <p className="text-gray-600">
-            Upload your resume to get personalized job matches
+            Upload your resume for AI-powered job matching
           </p>
         </div>
 
@@ -90,23 +83,20 @@ const LoginPage = () => {
             <DocumentArrowUpIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             
             <div className="mb-4">
-              <label className="block">
-                <span className="sr-only">Choose resume file</span>
-                <input
-                  type="file"
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  accept=".pdf,.txt,.doc,.docx"
-                  onChange={(e) => {
-                    setResumeFile(e.target.files[0]);
-                    setError('');
-                    setSuccess('');
-                  }}
-                />
-              </label>
+              <input
+                type="file"
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                accept=".pdf,.txt"
+                onChange={(e) => {
+                  setResumeFile(e.target.files[0]);
+                  setError('');
+                  setSuccess('');
+                }}
+              />
             </div>
             
             <p className="text-sm text-gray-500">
-              PDF, TXT, DOC, DOCX - max 5MB
+              PDF or TXT file
             </p>
             
             {error && (
@@ -149,10 +139,7 @@ const LoginPage = () => {
 
           <div className="text-center">
             <p className="text-sm text-gray-500">
-              Demo Mode: All features work with sample data
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              Backend connection optional for demonstration
+              Demo Mode: Works with sample data
             </p>
           </div>
         </div>

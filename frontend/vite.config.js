@@ -6,6 +6,7 @@ export default defineConfig({
   base: '/',
   build: {
     outDir: 'dist',
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -13,8 +14,5 @@ export default defineConfig({
         }
       }
     }
-  },
-  server: {
-    port: 3000
   }
 })
