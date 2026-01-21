@@ -1,74 +1,73 @@
-# 🚀 JobTracker AI - AI-Powered Job Tracking System
+# 🚀 JobTracker AI
 
-An intelligent job tracking application with AI-powered matching, smart application tracking, and natural language search.
+An **AI-powered job tracking system** that helps job seekers find relevant jobs, understand skill match scores, and track applications in one place.
+
+---
+
+## 🌐 Live
+
+* **App**: [https://jobtrackingai.vercel.app](https://job-tracking-ai-app.vercel.app)
+* **API**: [https://job-tracker-api-stsv.onrender.com/api/health](https://job-tracker-api-stsv.onrender.com/api/health)
+* **Repo**: [https://github.com/NihalShaikh245/job-tracker-ai](https://github.com/NihalShaikh245/job-tracker-ai)
+
+---
 
 ## ✨ Features
 
-### 🤖 AI-Powered Features
-- **Smart Job Matching**: AI scores jobs against your resume (0-100%)
-- **AI Chat Assistant**: Natural language job search and app guidance
-- **Match Explanations**: See why jobs match your skills
+### 🤖 AI Intelligence
+
+* Smart job–resume matching (0–100%)
+* Match explanations
+* AI chat for natural language job search
+* Top 6 best-match jobs highlighted
 
 ### 📋 Job Management
-- **Real-time Job Feed**: Fetches from RapidAPI JSearch
-- **Advanced Filters**: Role, skills, location, date, job type, work mode
-- **Best Matches**: Highlights top 6 matching jobs
+
+* Real-time job feed (RapidAPI-ready)
+* Filters: role, skills, location, date, job type, work mode
 
 ### 📊 Application Tracking
-- **Smart Apply Popup**: Tracks when you apply to jobs
-- **Status Pipeline**: Applied → Interview → Offer/Rejected
-- **Dashboard**: Visual timeline and statistics
 
-## 🏗️ Architecture
+* One-click apply
+* Status flow: **Applied → Interview → Offer / Rejected**
+* Dashboard with stats & filters
 
-┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│ Frontend │────▶│ Backend │────▶│ APIs │
-│ (Vercel) │◀────│ (Render) │◀────│ (RapidAPI, │
-│ │ │ │ │ OpenAI) │
-└─────────────┘ └─────────────┘ └─────────────┘
-│ │
-│ │
-▼ ▼
-┌─────────────┐ ┌─────────────┐
-│ Browser │ │ Redis │
-│ (React SPA) │ │ (Upstash) │
-└─────────────┘ └─────────────┘
+---
 
-## 🚀 Live Demo
+## 🛠️ Tech Stack
 
-- **Frontend**: [https://jobtracker-ai.vercel.app](https://jobtracker-ai.vercel.app)
-- **Backend API**: [https://jobtracker-api.onrender.com](https://jobtracker-api.onrender.com)
+**Frontend**: React 18, Vite, Tailwind CSS, React Router, TanStack Query
+**Backend**: Node.js, Fastify
+**AI / APIs**: Keyword-based matching, RapidAPI JSearch (ready), OpenAI (ready)
+**Deploy**: Vercel (Frontend), Render (Backend)
 
-## 💻 Local Development
+---
 
-### Prerequisites
-- Node.js 18+
-- npm or yarn
-- API Keys: RapidAPI, OpenAI, Upstash Redis
+## 🚀 Quick Start
 
-### 1. Clone Repository
 ```bash
-git clone https://github.com/yourusername/job-tracker-ai.git
+git clone https://github.com/NihalShaikh245/job-tracker-ai.git
 cd job-tracker-ai
+npm install
+npm run dev
+```
 
-## 🏗️ Architecture Diagram
+---
 
-```mermaid
-graph TB
-    A[User] --> B[React Frontend<br/>Vercel]
-    B --> C[Fastify Backend<br/>Render]
-    C --> D[RapidAPI<br/>JSearch]
-    C --> E[OpenAI GPT<br/>Matching]
-    C --> F[Redis<br/>Upstash]
-    
-    subgraph "Frontend"
-        G[Job Feed]
-        H[AI Assistant]
-        I[Applications]
-    end
-    
-    subgraph "Backend"
-        J[API Routes]
-        K[AI Service]
-        L[Cache Service]
-    end
+## 🚧 Future Scope
+
+* Resume upload & parsing
+* Authentication & profiles
+* AI interview prep
+* Email notifications
+
+---
+
+## 👨‍💻 Author
+
+**Nihal Shaikh**
+MCA Student | Full Stack Developer | AI Enthusiast
+
+---
+
+⭐ Star the repo if you like it!
