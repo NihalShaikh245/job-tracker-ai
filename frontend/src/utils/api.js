@@ -1,15 +1,14 @@
 import axios from 'axios';
 
-// HARDCODE your Render backend URL here
+// Use your Render backend URL
 const API_BASE_URL = 'https://jobtracker-api.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000, // 10 second timeout
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 10000
 });
+
 
 // Add error logging
 api.interceptors.request.use(
@@ -143,4 +142,18 @@ const apiService = {
   })
 };
 
-export default apiService;
+export default {
+  fetchJobs: (filters) => api.get('/jobs', { params: filters }),
+  
+  uploadResume: (text, fileName) => 
+    api.post('/resume/upload', { text, fileName, userId: 'demo' }),
+  
+  applyToJob: (job) => 
+    api.post('/applications', { job, userId: 'demo' }),
+  
+  getApplications: () => api.get('/applications'),
+  
+  chatWithAI: (message) => api.post('/chat', { message }),
+  
+  getStats: () => api.get('/stats')
+};

@@ -5,14 +5,14 @@ const fastify = require('fastify')({
 const cors = require('@fastify/cors');
 require('dotenv').config();
 
-// Enable CORS for all origins
+// Enable CORS
 fastify.register(cors, {
   origin: '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 });
 
-// ========== HEALTH CHECK ==========
+// Health check
 fastify.get('/api/health', async () => {
   return { 
     status: 'OK', 
@@ -23,105 +23,40 @@ fastify.get('/api/health', async () => {
   };
 });
 
-// ========== JOBS API ==========
+// Jobs API with filtering
 fastify.get('/api/jobs', async (request, reply) => {
   try {
     const filters = request.query || {};
-    
-    // Mock job data
-    const mockJobs = [
-      {
-        job_id: '1',
-        job_title: 'Senior React Developer',
-        employer_name: 'Tech Corp Inc',
-        job_city: 'Remote',
-        job_country: 'USA',
-        job_description: 'Looking for experienced React developer with 5+ years experience.',
-        job_employment_type: 'FULLTIME',
-        job_is_remote: true,
-        job_posted_at_timestamp: Math.floor(Date.now() / 1000) - 86400,
-        job_required_skills: 'React, JavaScript, TypeScript, CSS',
-        job_apply_link: 'https://example.com/apply/1',
-        match_score: 85,
-        match_reasons: ['React experience', 'JavaScript skills']
-      },
-      {
-        job_id: '2',
-        job_title: 'Full Stack Engineer',
-        employer_name: 'Startup XYZ',
-        job_city: 'New York',
-        job_country: 'USA',
-        job_description: 'Full stack developer needed for fast-growing startup.',
-        job_employment_type: 'FULLTIME',
-        job_is_remote: false,
-        job_posted_at_timestamp: Math.floor(Date.now() / 1000) - 172800,
-        job_required_skills: 'Node.js, React, MongoDB, AWS',
-        job_apply_link: 'https://example.com/apply/2',
-        match_score: 72,
-        match_reasons: ['Full stack skills', 'Node.js experience']
-      },
-      {
-        job_id: '3',
-        job_title: 'Frontend Developer',
-        employer_name: 'Digital Solutions',
-        job_city: 'Remote',
-        job_country: 'USA',
-        job_description: 'Frontend developer needed for e-commerce platform.',
-        job_employment_type: 'CONTRACTOR',
-        job_is_remote: true,
-        job_posted_at_timestamp: Math.floor(Date.now() / 1000) - 259200,
-        job_required_skills: 'React, Redux, CSS, Responsive Design',
-        job_apply_link: 'https://example.com/apply/3',
-        match_score: 65,
-        match_reasons: ['React proficiency', 'UI/UX skills']
-      },
-      {
-        job_id: '4',
-        job_title: 'DevOps Engineer',
-        employer_name: 'Cloud Systems',
-        job_city: 'Austin',
-        job_country: 'USA',
-        job_description: 'DevOps engineer to manage cloud infrastructure.',
-        job_employment_type: 'FULLTIME',
-        job_is_remote: true,
-        job_posted_at_timestamp: Math.floor(Date.now() / 1000) - 345600,
-        job_required_skills: 'AWS, Docker, Kubernetes, CI/CD',
-        job_apply_link: 'https://example.com/apply/4',
-        match_score: 45,
-        match_reasons: ['Cloud infrastructure knowledge']
-      }
-    ];
-    
-    // Apply simple filtering
+    const mockJobs = getMockJobs();
     let filteredJobs = [...mockJobs];
-    
+
+    // Apply filters
     if (filters.query) {
       const query = filters.query.toLowerCase();
       filteredJobs = filteredJobs.filter(job => 
         job.job_title.toLowerCase().includes(query) ||
-        job.employer_name.toLowerCase().includes(query) ||
-        job.job_description.toLowerCase().includes(query)
+        job.employer_name.toLowerCase().includes(query)
       );
     }
-    
+
     if (filters.match_score === 'high') {
       filteredJobs = filteredJobs.filter(job => job.match_score >= 70);
     } else if (filters.match_score === 'medium') {
       filteredJobs = filteredJobs.filter(job => job.match_score >= 40 && job.match_score < 70);
     }
-    
+
     if (filters.job_type && filters.job_type !== 'all') {
       filteredJobs = filteredJobs.filter(job => 
-        job.job_employment_type.toLowerCase() === filters.job_type.toLowerCase()
+        job.job_employment_type.toLowerCase() === filters.job_type
       );
     }
-    
+
     if (filters.work_mode === 'remote') {
       filteredJobs = filteredJobs.filter(job => job.job_is_remote);
     } else if (filters.work_mode === 'onsite') {
       filteredJobs = filteredJobs.filter(job => !job.job_is_remote);
     }
-    
+
     if (filters.skills) {
       const skills = filters.skills.toLowerCase().split(',');
       filteredJobs = filteredJobs.filter(job => {
@@ -129,205 +64,101 @@ fastify.get('/api/jobs', async (request, reply) => {
         return skills.some(skill => jobSkills.includes(skill.trim()));
       });
     }
-    
+
     return {
       jobs: filteredJobs,
       bestMatches: filteredJobs.filter(job => job.match_score >= 70).slice(0, 6),
       total: filteredJobs.length,
       hasResume: true
     };
-    
+
   } catch (error) {
-    console.error('Error fetching jobs:', error);
+    console.error('Error:', error);
     reply.code(500).send({ error: 'Failed to fetch jobs' });
   }
 });
 
-// ========== RESUME UPLOAD ==========
+// Other endpoints...
 fastify.post('/api/resume/upload', async (request, reply) => {
-  try {
-    const { text, fileName } = request.body || {};
-    
-    if (!text) {
-      return reply.code(400).send({ error: 'Resume text is required' });
-    }
-    
-    console.log('Resume uploaded:', fileName?.substring(0, 50) + '...');
-    
-    return { 
-      success: true, 
-      message: 'Resume uploaded successfully',
-      fileName: fileName || 'resume.pdf',
-      length: text.length
-    };
-    
-  } catch (error) {
-    console.error('Error uploading resume:', error);
-    reply.code(500).send({ error: 'Failed to upload resume' });
-  }
+  const { text, fileName } = request.body || {};
+  if (!text) return reply.code(400).send({ error: 'Resume text required' });
+  return { success: true, message: 'Resume uploaded', fileName, length: text.length };
 });
 
-// ========== APPLICATIONS ==========
 fastify.post('/api/applications', async (request, reply) => {
-  try {
-    const { job } = request.body || {};
-    
-    if (!job) {
-      return reply.code(400).send({ error: 'Job data is required' });
-    }
-    
-    const application = {
-      id: `app_${Date.now()}`,
-      job_title: job.job_title || 'Unknown',
-      company: job.employer_name || 'Unknown',
-      status: 'applied',
-      applied_date: new Date().toISOString(),
-      match_score: job.match_score || 0
-    };
-    
-    return {
-      success: true,
-      application,
-      message: 'Application tracked successfully'
-    };
-    
-  } catch (error) {
-    console.error('Error tracking application:', error);
-    reply.code(500).send({ error: 'Failed to track application' });
-  }
-});
-
-fastify.get('/api/applications', async (request, reply) => {
-  try {
-    return {
-      applications: [],
-      stats: {
-        total: 0,
-        byStatus: { applied: 0, interview: 0, offer: 0, rejected: 0 },
-        avgMatchScore: 0
-      }
-    };
-  } catch (error) {
-    console.error('Error getting applications:', error);
-    reply.code(500).send({ error: 'Failed to get applications' });
-  }
-});
-
-// ========== AI CHAT ==========
-fastify.post('/api/chat', async (request, reply) => {
-  try {
-    const { message } = request.body || {};
-    
-    if (!message) {
-      return reply.code(400).send({ error: 'Message is required' });
-    }
-    
-    const response = {
-      response: `I'm your AI assistant. You asked: "${message}". I can help you find jobs, track applications, and answer questions about the app.`,
-      filters: {},
-      type: 'jobs'
-    };
-    
-    // Simple keyword matching for filters
-    const msg = message.toLowerCase();
-    if (msg.includes('remote')) {
-      response.filters.work_mode = 'remote';
-    }
-    if (msg.includes('react')) {
-      response.filters.skills = 'react';
-    }
-    if (msg.includes('python')) {
-      response.filters.skills = 'python';
-    }
-    if (msg.includes('senior')) {
-      response.filters.query = 'senior developer';
-    }
-    if (msg.includes('figma')) {
-      response.filters.skills = 'figma';
-    }
-    if (msg.includes('this week')) {
-      response.filters.date_posted = 'week';
-    }
-    
-    return {
-      success: true,
-      ...response
-    };
-    
-  } catch (error) {
-    console.error('Error processing chat:', error);
-    reply.code(500).send({ error: 'Chat service failed' });
-  }
-});
-
-// ========== STATS ==========
-fastify.get('/api/stats', async (request, reply) => {
-  try {
-    return {
-      total: 0,
-      byStatus: { applied: 0, interview: 0, offer: 0, rejected: 0 },
-      avgMatchScore: 65,
-      hasResume: true,
-      resumeLength: 1500
-    };
-  } catch (error) {
-    console.error('Error getting stats:', error);
-    reply.code(500).send({ error: 'Failed to get stats' });
-  }
-});
-
-// ========== ROOT ==========
-fastify.get('/', async () => {
+  const { job } = request.body || {};
+  if (!job) return reply.code(400).send({ error: 'Job data required' });
   return { 
-    message: 'Job Tracker API is running',
-    endpoints: [
-      'GET  /api/health',
-      'GET  /api/jobs',
-      'POST /api/resume/upload',
-      'POST /api/applications',
-      'GET  /api/applications',
-      'POST /api/chat',
-      'GET  /api/stats'
-    ]
+    success: true, 
+    application: {
+      id: `app_${Date.now()}`,
+      job_title: job.job_title,
+      company: job.employer_name,
+      status: 'applied',
+      applied_date: new Date().toISOString()
+    }
   };
 });
 
-// ========== 404 HANDLER ==========
-fastify.setNotFoundHandler((request, reply) => {
-  reply.code(404).send({ 
-    error: 'Route not found',
-    path: request.url,
-    method: request.method,
-    availableRoutes: [
-      'GET  /',
-      'GET  /api/health',
-      'GET  /api/jobs',
-      'POST /api/resume/upload',
-      'POST /api/applications',
-      'GET  /api/applications',
-      'POST /api/chat',
-      'GET  /api/stats'
-    ]
-  });
+fastify.get('/api/applications', async (request, reply) => {
+  return { applications: [], stats: { total: 0, byStatus: { applied: 0, interview: 0, offer: 0, rejected: 0 } } };
 });
 
-// ========== START SERVER ==========
+fastify.post('/api/chat', async (request, reply) => {
+  const { message } = request.body || {};
+  if (!message) return reply.code(400).send({ error: 'Message required' });
+  
+  const filters = {};
+  const msg = message.toLowerCase();
+  if (msg.includes('remote')) filters.work_mode = 'remote';
+  if (msg.includes('react')) filters.skills = 'react';
+  if (msg.includes('senior')) filters.query = 'senior developer';
+  
+  return {
+    success: true,
+    response: `AI Assistant: I'll help you find jobs. Try using the filters above!`,
+    filters,
+    type: 'jobs'
+  };
+});
+
+fastify.get('/api/stats', async (request, reply) => {
+  return {
+    total: 0,
+    byStatus: { applied: 0, interview: 0, offer: 0, rejected: 0 },
+    avgMatchScore: 68,
+    hasResume: true,
+    resumeLength: 1500
+  };
+});
+
+// Helper function
+function getMockJobs() {
+  return [
+    {
+      job_id: '1', job_title: 'Senior React Developer', employer_name: 'Tech Corp',
+      job_city: 'Remote', job_country: 'USA', match_score: 85,
+      job_description: 'Looking for React developer with 5+ years experience.',
+      job_employment_type: 'FULLTIME', job_is_remote: true,
+      job_posted_at_timestamp: Math.floor(Date.now() / 1000) - 86400,
+      job_required_skills: 'React, JavaScript, TypeScript, CSS',
+      job_apply_link: 'https://example.com/apply/1',
+      match_reasons: ['React experience', 'JavaScript skills']
+    },
+    // Add 4-5 more mock jobs...
+  ];
+}
+
+// Start server
 const start = async () => {
   try {
     const port = process.env.PORT || 5000;
     const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
     
-    await fastify.listen({ 
-      port: port,
-      host: host
-    });
-    
+    await fastify.listen({ port, host });
     console.log(`✅ Server running on ${host}:${port}`);
-    console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🌐 CORS: Enabled for all origins`);
-    
   } catch (err) {
-    console.error('❌ Server failed to start:', err);
+    console.error('❌ Server failed:', err);
     process.exit(1);
   }
 };

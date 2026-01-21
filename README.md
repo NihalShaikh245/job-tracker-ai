@@ -50,3 +50,25 @@ An intelligent job tracking application with AI-powered matching, smart applicat
 ```bash
 git clone https://github.com/yourusername/job-tracker-ai.git
 cd job-tracker-ai
+
+## 🏗️ Architecture Diagram
+
+```mermaid
+graph TB
+    A[User] --> B[React Frontend<br/>Vercel]
+    B --> C[Fastify Backend<br/>Render]
+    C --> D[RapidAPI<br/>JSearch]
+    C --> E[OpenAI GPT<br/>Matching]
+    C --> F[Redis<br/>Upstash]
+    
+    subgraph "Frontend"
+        G[Job Feed]
+        H[AI Assistant]
+        I[Applications]
+    end
+    
+    subgraph "Backend"
+        J[API Routes]
+        K[AI Service]
+        L[Cache Service]
+    end
