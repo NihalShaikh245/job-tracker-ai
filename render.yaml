@@ -9,6 +9,6 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: 10000  # Render provides this automatically
       - key: FRONTEND_URL
         value: https://job-tracker-ai.vercel.app
